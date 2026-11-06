@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% block title %}Reservations{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="page-hero-inner">
+        <span class="hero-eyebrow">Book a Table</span>
+        <h1>Reservations</h1>
+        <p>Reserve your table online at Little Lemon Chicago.</p>
+    </div>
+</section>
+
+<section class="reservation-section" id="reservations">
+    <div class="reservation-container reservation-layout">
+        <!-- Existing reservation form design (preserved) -->
+        <div class="booking-form-wrapper">
+            <h2 class="form-title">Table Reservation</h2>
+            <form id="booking-form" novalidate>
+                <div class="form-group">
+                    <label for="booking-name">Full Name</label>
+                    <input type="text" id="booking-name" class="form-input" placeholder="e.g. Rahul Sharma" maxlength="255" required>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="booking-guests">Number of Guests</label>
+                        <input type="number" id="booking-guests" class="form-input" min="1" max="50" value="2" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="booking-date">Date &amp; Time</label>
+                        <input type="datetime-local" id="booking-date" class="form-input" required>
+                    </div>
+                </div>
+
+                <button type="submit" id="booking-submit-btn" class="btn-submit">Confirm Reservation</button>
+                <div id="booking-status" class="form-alert" role="status" aria-live="polite"></div>
+            </form>
+            <p class="form-note" id="booking-login-note">
+                Tip: <a href="{% url 'login' %}">log in</a> before booking to see and manage your reservations here.
+            </p>
+        </div>
+
+        <aside class="info-card">
+            <h3>Good to know</h3>
+            <ul class="info-list">
+                <li><strong>Opening hours</strong><span>Mon&ndash;Thu 11:00&ndash;22:00<br>Fri&ndash;Sat 11:00&ndash;23:00<br>Sun 12:00&ndash;21:00</span></li>
+                <li><strong>Large groups</strong><span>Up to 50 guests per online booking. For private events please <a href="{% url 'contact-page' %}">contact us</a>.</span></li>
+                <li><strong>Phone</strong><span><a href="tel:+13125550198">(312) 555-0198</a></span></li>
+            </ul>
+        </aside>
+    </div>
+</section>
+
+<!-- Logged-in user's bookings (GET /api/booking/) -->
+<section class="specials-section" id="my-bookings-section" style="display:none;">
+    <div class="specials-header">
+        <h2>Your reservations</h2>
+    </div>
+    <div id="my-bookings"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var LL = window.LittleLemon;
+    var form = document.getElementById('booking-form');
+    var alertBox = document.getElementById('booking-status');
+    var submitBtn = document.getElementById('booking-submit-btn');
+    var dateInput = document.getElementById('booking-date');
+
+    function toLocalInputValue(d) {
+        var pad = function (n) { return String(n).padStart(2, '0'); };
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+               'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    // Default: tomorrow 19:30; earliest selectable: now
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(19, 30, 0, 0);
+    dateInput.value = toLocalInputValue(tomorrow);
+    dateInput.min = toLocalInputValue(new Date());
+
+    function loadMyBookings() {
+        var section = document.getElementById('my-bookings-section');
+        var list = document.getElementById('my-bookings');
+        var note = document.getElementById('booking-login-note');
+        if (!LL.auth.isLoggedIn()) {
+            section.style.display = 'none';
+            note.style.display = 'block';
+            return;
+        }
+        note.style.display = 'none';
+        section.style.display = 'block';
+        list.innerHTML = LL.stateHtml('loading', 'Loading your reservations...');
+
+        LL.api('/api/booking/').then(function (res) {
+            if (!res.ok) {
+                list.innerHTML = LL.stateHtml('error', LL.formatApiErrors(res.data, 'Could not load your reservations.'));
+                return;
+            }
+            var bookings = res.data || [];
+            if (!bookings.length) {
+                list.innerHTML = LL.stateHtml('empty', 'You have no reservations yet.');
+                return;
+            }
+            list.innerHTML = '<div class="booking-list">' + bookings.map(function (b) {
+                return '<div class="booking-item">' +
+                    '<div><strong>#' + b.id + ' &middot; ' + LL.escapeHtml(b.name) + '</strong>' +
+                    '<span>' + new Date(b.booking_date).toLocaleString() + ' &middot; ' + b.no_of_guests + ' guest(s)</span></div>' +
+                    '<button type="button" class="btn-small-danger" data-cancel-id="' + b.id + '">Cancel</button>' +
+                    '</div>';
+            }).join('') + '</div>';
+        });
+    }
+
+    document.getElementById('my-bookings').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-cancel-id]');
+        if (!btn) return;
+        if (!window.confirm('Cancel this reservation?')) return;
+        btn.disabled = true;
+        LL.api('/api/booking/' + btn.dataset.cancelId + '/', { method: 'DELETE' }).then(function (res) {
+            if (res.ok) {
+                LL.showAlert(alertBox, 'success', 'Reservation #' + btn.dataset.cancelId + ' was cancelled.');
+                loadMyBookings();
+            } else {
+                btn.disabled = false;
+                LL.showAlert(alertBox, 'error', LL.formatApiErrors(res.data, 'Could not cancel the reservation.'));
+            }
+        });
+    });
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        LL.hideAlert(alertBox);
+
+        var name = document.getElementById('booking-name').value.trim();
+        var guests = parseInt(document.getElementById('booking-guests').value, 10);
+        var dateVal = dateInput.value;
+
+        // Client-side checks (the server validates again)
+        if (name.length < 2) return LL.showAlert(alertBox, 'error', 'Please enter your full name.');
+        if (isNaN(guests) || guests < 1 || guests > 50) return LL.showAlert(alertBox, 'error', 'Number of guests must be between 1 and 50.');
+        if (!dateVal) return LL.showAlert(alertBox, 'error', 'Please choose a date and time.');
+        var when = new Date(dateVal);
+        if (when < new Date()) return LL.showAlert(alertBox, 'error', 'Please choose a date and time in the future.');
+
+        LL.setLoading(submitBtn, true, 'Saving reservation...');
+        LL.api('/api/booking/', {
+            method: 'POST',
+            body: { name: name, no_of_guests: guests, booking_date: when.toISOString() }
+        }).then(function (res) {
+            LL.setLoading(submitBtn, false);
+            // Success message ONLY when the API confirms the booking was saved
+            if (res.status === 201 && res.data && res.data.id) {
+                LL.showAlert(alertBox, 'success',
+                    'Reservation confirmed! Booking #' + res.data.id + ' for ' + res.data.name +
+                    ' (' + res.data.no_of_guests + ' guest' + (res.data.no_of_guests > 1 ? 's' : '') + ') on ' +
+                    new Date(res.data.booking_date).toLocaleString() + '.');
+                form.reset();
+                dateInput.value = toLocalInputValue(tomorrow);
+                loadMyBookings();
+            } else {
+                LL.showAlert(alertBox, 'error', LL.formatApiErrors(res.data, 'Reservation failed. Please try again.'));
+            }
+        });
+    });
+
+    loadMyBookings();
+});
+</script>
+{% endblock %}
+

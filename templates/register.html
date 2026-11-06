@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Register Account{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="page-hero-inner">
+        <span class="hero-eyebrow">Join Little Lemon</span>
+        <h1>Create an Account</h1>
+        <p>Register as a Little Lemon customer to book tables and access special offers.</p>
+    </div>
+</section>
+
+<section class="reservation-section">
+    <div class="reservation-container" style="max-width: 520px;">
+        <div class="booking-form-wrapper">
+            <h2 class="form-title">Customer Registration</h2>
+            <form id="standalone-register-form">
+                <div class="form-group">
+                    <label for="page-reg-username">Username</label>
+                    <input type="text" id="page-reg-username" class="form-input" placeholder="Choose a username" required minlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="page-reg-email">Email Address</label>
+                    <input type="email" id="page-reg-email" class="form-input" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="page-reg-password">Password (min 8 characters)</label>
+                    <input type="password" id="page-reg-password" class="form-input" placeholder="••••••••" required minlength="8">
+                </div>
+                <button type="submit" id="page-reg-submit" class="btn-submit">Create Account</button>
+                <div id="page-reg-status" class="form-alert" style="display: none;"></div>
+            </form>
+            <p class="form-note" style="text-align: center; margin-top: 1.5rem;">
+                Already have an account? <a href="{% url 'login' %}">Login here</a>
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var LL = window.LittleLemon;
+    var form = document.getElementById('standalone-register-form');
+    var alertBox = document.getElementById('page-reg-status');
+    var btn = document.getElementById('page-reg-submit');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var username = document.getElementById('page-reg-username').value.trim();
+        var email = document.getElementById('page-reg-email').value.trim();
+        var password = document.getElementById('page-reg-password').value;
+
+        LL.setLoading(btn, true, 'Creating account...');
+        LL.hideAlert(alertBox);
+
+        try {
+            var res = await LL.api('/api/register/', {
+                method: 'POST',
+                body: { username: username, email: email, password: password },
+                auth: false
+            });
+
+            LL.setLoading(btn, false);
+            if (res.ok || res.status === 201) {
+                LL.showAlert(alertBox, 'success', 'Account created successfully! Redirecting to login...');
+                setTimeout(function() {
+                    window.location.href = '/login/';
+                }, 1000);
+            } else {
+                LL.showAlert(alertBox, 'error', LL.formatApiErrors(res.data, 'Registration failed.'));
+            }
+        } catch(err) {
+            LL.setLoading(btn, false);
+            LL.showAlert(alertBox, 'error', 'Error connecting to registration API.');
+        }
+    });
+});
+</script>
+{% endblock %}
+

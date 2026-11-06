@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% block title %}Menu{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="page-hero-inner">
+        <span class="hero-eyebrow">Our Menu</span>
+        <h1>Mediterranean Favourites</h1>
+        <p>Starters, mains, desserts and drinks &middot; prepared fresh daily from our kitchen.</p>
+    </div>
+</section>
+
+<section class="specials-section">
+    <div class="specials-header" style="margin-bottom: 1.5rem;">
+        <div>
+            <h2 style="font-size: 2.1rem; margin-bottom: 0.25rem;">Explore Dishes</h2>
+            <p style="color: #666;">Filter by category or browse all authentic Mediterranean recipes.</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <button type="button" id="menu-page-add-btn" class="btn-add-item" style="display: none;">+ Add New Dish</button>
+            <a href="/api/menu/" target="_blank" class="btn-online-menu">API View</a>
+        </div>
+    </div>
+
+    <!-- Admin banner on menu page -->
+    <div id="page-admin-banner" class="admin-menu-bar" style="display: none;">
+        <div>
+            <span class="admin-badge">Admin Mode</span>
+            <span>You have staff permissions to add, edit, or delete menu items.</span>
+        </div>
+        <button type="button" id="page-admin-banner-add" class="btn-add-item">+ Add New Dish</button>
+    </div>
+
+    <!-- Category filter buttons -->
+    <div class="category-filter-bar" id="page-category-tabs">
+        <button type="button" class="category-filter-btn active" data-category="all">All Dishes</button>
+        <button type="button" class="category-filter-btn" data-category="starters">Starters</button>
+        <button type="button" class="category-filter-btn" data-category="main">Main Course</button>
+        <button type="button" class="category-filter-btn" data-category="desserts">Desserts</button>
+        <button type="button" class="category-filter-btn" data-category="drinks">Drinks</button>
+    </div>
+
+    <div class="specials-grid" id="page-menu-grid">
+        <div class="state-box state-loading">Loading menu from database...</div>
+    </div>
+</section>
+
+<!-- Admin Add / Edit Modal -->
+<div id="page-menu-modal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="page-modal-title">Add New Menu Item</h3>
+            <button type="button" class="modal-close-btn" id="page-modal-close">&times;</button>
+        </div>
+        <form id="page-menu-form" class="modal-form">
+            <input type="hidden" id="page-item-id">
+            <div class="form-group">
+                <label for="page-item-title">Dish Title *</label>
+                <input type="text" id="page-item-title" class="form-input" placeholder="e.g. Pan-Seared Salmon" required>
+            </div>
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label for="page-item-category">Category *</label>
+                    <select id="page-item-category" class="form-input" required>
+                        <option value="starters">Starters</option>
+                        <option value="main" selected>Main Course</option>
+                        <option value="desserts">Desserts</option>
+                        <option value="drinks">Drinks</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="page-item-price">Price (USD) *</label>
+                    <input type="number" step="0.01" id="page-item-price" class="form-input" placeholder="18.50" required min="0.01">
+                </div>
+            </div>
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label for="page-item-inventory">Inventory Stock *</label>
+                    <input type="number" id="page-item-inventory" class="form-input" value="20" min="0" required>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; margin-top: 1.5rem;">
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-weight: 700;">
+                        <input type="checkbox" id="page-item-featured" style="width: 18px; height: 18px;">
+                        Featured Special
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="page-item-image">Image URL</label>
+                <input type="url" id="page-item-image" class="form-input" placeholder="https://images.unsplash.com/...">
+            </div>
+            <div class="form-group">
+                <label for="page-item-desc">Description</label>
+                <textarea id="page-item-desc" class="form-input" rows="3" placeholder="Dish description..."></textarea>
+            </div>
+            <div id="page-modal-alert" class="booking-alert" style="display: none;"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" id="page-modal-cancel">Cancel</button>
+                <button type="submit" class="btn-modal-submit" id="page-modal-submit">Save Dish</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var LL = window.LittleLemon;
+    var grid = document.getElementById('page-menu-grid');
+    var tabs = document.querySelectorAll('#page-category-tabs .category-filter-btn');
+    var modal = document.getElementById('page-menu-modal');
+    var form = document.getElementById('page-menu-form');
+    var alertBox = document.getElementById('page-modal-alert');
+    var modalTitle = document.getElementById('page-modal-title');
+    var addBtn = document.getElementById('menu-page-add-btn');
+    var banner = document.getElementById('page-admin-banner');
+    var bannerAddBtn = document.getElementById('page-admin-banner-add');
+
+    var menuItems = [];
+    var activeCategory = 'all';
+
+    function isStaff() {
+        return localStorage.getItem('littlelemon_is_staff') === 'true';
+    }
+
+    function checkAdminUI() {
+        if (isStaff()) {
+            addBtn.style.display = 'inline-block';
+            banner.style.display = 'flex';
+        } else {
+            addBtn.style.display = 'none';
+            banner.style.display = 'none';
+        }
+    }
+
+    function render() {
+        checkAdminUI();
+        var filtered = activeCategory === 'all'
+            ? menuItems
+            : menuItems.filter(function(i) { return (i.category || '').toLowerCase() === activeCategory; });
+
+        if (!filtered.length) {
+            grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: #fff; border-radius: 12px;">' +
+                '<p style="color: #666; font-size: 1.1rem;">No dishes in this category.</p>' +
+                (isStaff() ? '<button type="button" class="btn-add-item" onclick="openAddModal()" style="margin-top: 1rem;">+ Add Dish</button>' : '') +
+                '</div>';
+            return;
+        }
+
+        var html = '';
+        var admin = isStaff();
+        filtered.forEach(function(item) {
+            var catLabel = item.category_display || LL.CATEGORY_LABELS[item.category] || 'Dish';
+            var img = item.image_url || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80';
+            var adminButtons = admin ?
+                '<div class="admin-card-actions">' +
+                    '<button type="button" class="btn-card-edit" onclick="openEditModal(' + item.id + ')">✏️ Edit</button>' +
+                    '<button type="button" class="btn-card-delete" onclick="deleteItem(' + item.id + ', \'' + (item.title || '').replace(/'/g, "\\'") + '\')">🗑️ Delete</button>' +
+                '</div>' : '';
+
+            html += '<article class="special-card">' +
+                '<div class="card-img-container">' +
+                    '<img src="' + LL.escapeHtml(img) + '" alt="' + LL.escapeHtml(item.title) + '" onerror="this.onerror=null;this.src=\'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80\';">' +
+                    '<span class="card-category-badge">' + LL.escapeHtml(catLabel) + '</span>' +
+                    '<span class="card-inventory-badge">Stock: ' + (item.inventory || 0) + '</span>' +
+                '</div>' +
+                '<div class="special-card-content">' +
+                    '<div class="special-card-title-row">' +
+                        '<h3>' + LL.escapeHtml(item.title) + '</h3>' +
+                        '<span class="special-card-price">$' + parseFloat(item.price).toFixed(2) + '</span>' +
+                    '</div>' +
+                    '<p class="special-card-desc">' + LL.escapeHtml(item.description || 'Mediterranean speciality.') + '</p>' +
+                    '<a href="/order/" class="delivery-link"><span>Order a delivery</span> 🛵</a>' +
+                    adminButtons +
+                '</div>' +
+            '</article>';
+        });
+        grid.innerHTML = html;
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            activeCategory = tab.dataset.category;
+            render();
+        });
+    });
+
+    async function loadMenu() {
+        var res = await LL.api('/api/menu/');
+        if (!res.ok) {
+            grid.innerHTML = LL.stateHtml('error', LL.formatApiErrors(res.data, 'Could not load menu.'));
+            return;
+        }
+        menuItems = res.data || [];
+        render();
+    }
+
+    window.openAddModal = function() {
+        form.reset();
+        document.getElementById('page-item-id').value = '';
+        document.getElementById('page-item-category').value = activeCategory !== 'all' ? activeCategory : 'main';
+        modalTitle.textContent = 'Add New Menu Item';
+        alertBox.style.display = 'none';
+        modal.classList.add('open');
+    };
+
+    window.openEditModal = function(id) {
+        var item = menuItems.find(function(i) { return i.id === id; });
+        if (!item) return;
+        document.getElementById('page-item-id').value = item.id;
+        document.getElementById('page-item-title').value = item.title;
+        document.getElementById('page-item-category').value = (item.category || 'main').toLowerCase();
+        document.getElementById('page-item-price').value = item.price;
+        document.getElementById('page-item-inventory').value = item.inventory;
+        document.getElementById('page-item-image').value = item.image_url || '';
+        document.getElementById('page-item-desc').value = item.description || '';
+        document.getElementById('page-item-featured').checked = !!item.featured;
+        modalTitle.textContent = 'Edit Menu Item: ' + item.title;
+        alertBox.style.display = 'none';
+        modal.classList.add('open');
+    };
+
+    function closeModal() {
+        modal.classList.remove('open');
+        form.reset();
+    }
+
+    document.getElementById('page-modal-close').addEventListener('click', closeModal);
+    document.getElementById('page-modal-cancel').addEventListener('click', closeModal);
+    addBtn.addEventListener('click', window.openAddModal);
+    bannerAddBtn.addEventListener('click', window.openAddModal);
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+    });
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var id = document.getElementById('page-item-id').value;
+        var token = LL.auth.getToken();
+        if (!token) {
+            alertBox.style.display = 'block';
+            alertBox.style.backgroundColor = '#fde8e8';
+            alertBox.style.color = '#c81e1e';
+            alertBox.textContent = 'You must be logged in as staff.';
+            return;
+        }
+
+        var payload = {
+            title: document.getElementById('page-item-title').value.trim(),
+            category: document.getElementById('page-item-category').value,
+            price: parseFloat(document.getElementById('page-item-price').value),
+            inventory: parseInt(document.getElementById('page-item-inventory').value, 10),
+            image_url: document.getElementById('page-item-image').value.trim(),
+            description: document.getElementById('page-item-desc').value.trim(),
+            featured: document.getElementById('page-item-featured').checked
+        };
+
+        var url = id ? ('/api/menu/' + id + '/') : '/api/menu/';
+        var method = id ? 'PUT' : 'POST';
+
+        var res = await LL.api(url, { method: method, body: payload });
+        if (res.ok) {
+            closeModal();
+            loadMenu();
+        } else {
+            alertBox.style.display = 'block';
+            alertBox.style.backgroundColor = '#fde8e8';
+            alertBox.style.color = '#c81e1e';
+            alertBox.textContent = LL.formatApiErrors(res.data, 'Failed to save menu item.');
+        }
+    });
+
+    window.deleteItem = async function(id, title) {
+        if (!confirm('Are you sure you want to delete "' + title + '"?')) return;
+        var res = await LL.api('/api/menu/' + id + '/', { method: 'DELETE' });
+        if (res.ok) {
+            loadMenu();
+        } else {
+            alert(LL.formatApiErrors(res.data, 'Could not delete dish.'));
+        }
+    };
+
+    loadMenu();
+});
+</script>
+{% endblock %}

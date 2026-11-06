@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Little Lemon Restaurant</title>
+    <!-- Static stylesheet links compatible with both Django and Live Server -->
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="../static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- ====================================================================
+         Official Header & Navigation
+         Matches Coursera project screenshot: Logo on left, serif nav items right
+         ==================================================================== -->
+    <header class="site-header">
+        <div class="header-container">
+            <a href="#home" class="logo-link" title="Little Lemon Restaurant">
+                <!-- Inline SVG Logo for instant rendering in both Live Server and Django -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 50" width="225" height="46" class="brand-logo-svg">
+                    <!-- Lemon Fruit -->
+                    <ellipse cx="23" cy="27" rx="17" ry="16" fill="#F4CE14" />
+                    <path d="M 5 27 Q 3 24 5 21" stroke="#E5BD00" stroke-width="2" fill="none" />
+                    <path d="M 40 27 Q 42 24 40 21" stroke="#E5BD00" stroke-width="2" fill="none" />
+                    <!-- Green Leaf & Stem -->
+                    <path d="M 23 11 C 26 5 33 4 38 7 C 35 12 30 13 23 11 Z" fill="#495E57" />
+                    <path d="M 23 11 C 19 6 14 6 12 9 C 15 12 19 12 23 11 Z" fill="#495E57" opacity="0.85" />
+                    <!-- Wordmark -->
+                    <text x="56" y="32" font-family="'Playfair Display', Georgia, serif" font-weight="900" font-size="20" fill="#495E57" letter-spacing="2.8">LITTLE LEMON</text>
+                </svg>
+            </a>
+            <nav class="site-nav">
+                <ul>
+                    <li><a href="#home" class="active">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#menu">Menu</a></li>
+                    <li><a href="#reservations">Reservations</a></li>
+                    <li><a href="#order">Order</a></li>
+                    <li><a href="#login" id="nav-login-link">Login</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ====================================================================
+         Hero Section
+         ==================================================================== -->
+    <section class="hero" id="home">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1>Little Lemon</h1>
+                <div class="hero-subtitle">Chicago</div>
+                <p class="hero-desc">
+                    We are a family owned Mediterranean restaurant, focused on traditional
+                    recipes served with a modern twist. Fresh seasonal ingredients, warm
+                    hospitality and authentic flavours.
+                </p>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <a href="#reservations" class="btn-reserve">Reserve a Table</a>
+                    <a href="#menu" class="btn-reserve" style="background-color: transparent; color: #fff; border: 2px solid var(--primary-yellow);">Explore Menu</a>
+                </div>
+            </div>
+            <div class="hero-image-wrapper">
+                <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80" alt="Restaurant Dish" class="hero-image">
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================
+         Dynamic Online Menu Section (Powered by DRF /api/menu/ & MySQL)
+         ==================================================================== -->
+    <section class="specials-section" id="menu">
+        <div class="specials-header">
+            <div>
+                <h2 style="margin-bottom: 0.25rem;">Our Mediterranean Menu</h2>
+                <p style="color: #666; font-size: 1.05rem;">Freshly prepared daily &middot; Live from our Django REST Framework Menu API</p>
+            </div>
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                <button type="button" id="admin-add-item-btn" class="btn-add-item" style="display: none;">+ Add New Dish</button>
+                <a href="http://127.0.0.1:8000/api/menu/" target="_blank" class="btn-online-menu">API View</a>
+            </div>
+        </div>
+
+        <!-- Admin Notice Banner (only visible to staff/admin users) -->
+        <div id="admin-banner" class="admin-menu-bar" style="display: none;">
+            <div>
+                <span class="admin-badge">Admin Controls Active</span>
+                <span>You are signed in with staff permissions. You can add, edit, or delete menu items directly in MySQL.</span>
+            </div>
+            <button type="button" id="admin-banner-add-btn" class="btn-add-item">+ Add New Menu Item</button>
+        </div>
+
+        <!-- Category Filters -->
+        <div class="category-filter-bar" id="category-filter-bar">
+            <button type="button" class="category-filter-btn active" data-category="all">All Dishes</button>
+            <button type="button" class="category-filter-btn" data-category="starters">Starters</button>
+            <button type="button" class="category-filter-btn" data-category="main">Main Course</button>
+            <button type="button" class="category-filter-btn" data-category="desserts">Desserts</button>
+            <button type="button" class="category-filter-btn" data-category="drinks">Drinks</button>
+        </div>
+
+        <!-- Dynamic Menu Cards Container -->
+        <div class="specials-grid" id="menu-cards-container">
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🍋</div>
+                <p style="font-weight: 600;">Loading live menu items from MySQL database...</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal for Admin Add / Edit Menu Item (POST / PUT) -->
+    <div id="menu-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title">Add New Menu Item</h3>
+                <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="Close">&times;</button>
+            </div>
+            <form id="menu-item-form" class="modal-form">
+                <input type="hidden" id="item-id">
+                <div class="form-group">
+                    <label for="item-title">Dish Title *</label>
+                    <input type="text" id="item-title" class="form-input" placeholder="e.g. Pan-Seared Salmon" required>
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="item-category">Category *</label>
+                        <select id="item-category" class="form-input" required>
+                            <option value="starters">Starters</option>
+                            <option value="main" selected>Main Course</option>
+                            <option value="desserts">Desserts</option>
+                            <option value="drinks">Drinks</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-price">Price (USD) *</label>
+                        <input type="number" step="0.01" id="item-price" class="form-input" placeholder="18.50" required min="0.01">
+                    </div>
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="item-inventory">Inventory Stock *</label>
+                        <input type="number" id="item-inventory" class="form-input" value="20" min="0" required>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; margin-top: 1.5rem;">
+                        <label style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-weight: 700;">
+                            <input type="checkbox" id="item-featured" style="width: 18px; height: 18px;">
+                            Featured Special
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="item-image-url">Image URL</label>
+                    <input type="url" id="item-image-url" class="form-input" placeholder="https://images.unsplash.com/photo-...">
+                </div>
+                <div class="form-group">
+                    <label for="item-description">Description</label>
+                    <textarea id="item-description" class="form-input" rows="3" placeholder="Crispy-skin salmon with cucumber relish and balsamic glaze..."></textarea>
+                </div>
+                <div id="modal-alert" class="booking-alert" style="display: none;"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-modal-cancel" id="modal-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn-modal-submit" id="modal-submit-btn">Save Dish</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         Online Reservations (Table Booking connected to Django API)
+         ==================================================================== -->
+    <section class="reservation-section" id="reservations">
+        <div class="reservation-container">
+            <h2 class="section-title">Table Reservations</h2>
+            <p class="section-subtitle">Book your table online at Little Lemon Chicago</p>
+
+            <div class="booking-form-wrapper">
+                <form id="booking-form">
+                    <div class="form-group">
+                        <label for="booking-name">Full Name</label>
+                        <input type="text" id="booking-name" class="form-input" placeholder="e.g. Rahul Sharma" required>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="booking-guests">Number of Guests</label>
+                            <input type="number" id="booking-guests" class="form-input" min="1" max="50" value="2" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="booking-date">Date &amp; Time</label>
+                            <input type="datetime-local" id="booking-date" class="form-input" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="booking-submit-btn" class="btn-submit">Confirm Reservation</button>
+                    <div id="booking-status" class="booking-alert"></div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================
+         About Section
+         ==================================================================== -->
+    <section class="about-section" id="about">
+        <div class="about-text">
+            <h2>Little Lemon</h2>
+            <div class="about-sub">Chicago</div>
+            <p>
+                Little Lemon is a charming neighborhood bistro that serves simple food
+                and classic cocktails in a lively but casual environment. The restaurant
+                features a locally-sourced menu with daily specials.
+            </p>
+            <p>
+                Founded by brothers Mario and Adrian, Little Lemon combines rustic Mediterranean
+                traditions with contemporary cooking styles to bring an unforgettable dining
+                experience to downtown Chicago.
+            </p>
+        </div>
+        <div class="about-images">
+            <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=700&q=80" alt="Little Lemon Chefs" class="about-img">
+        </div>
+    </section>
+
+    <!-- ====================================================================
+         Order & Customer Account (Connected to Django Authentication)
+         ==================================================================== -->
+    <section class="reservation-section" id="order" style="background-color: #fff;">
+        <div class="reservation-container">
+            <h2 class="section-title" id="login">Customer Account &amp; Authentication</h2>
+            <p class="section-subtitle">Login or register to manage table bookings or menu items</p>
+
+            <div class="booking-form-wrapper" style="max-width: 500px;">
+                <!-- Login Box -->
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="user-login">Username</label>
+                        <input type="text" id="user-login" class="form-input" placeholder="Enter username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-password">Password</label>
+                        <input type="password" id="user-password" class="form-input" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" id="login-btn" class="btn-submit">Login / Obtain Token</button>
+                    <div id="login-status" class="booking-alert"></div>
+                </form>
+
+                <!-- Registration Accordion / Toggle -->
+                <div style="margin-top: 1.5rem; text-align: center; border-top: 1px solid #eee; padding-top: 1rem;">
+                    <a href="javascript:void(0)" id="toggle-register-btn" style="color: #495E57; font-weight: 700; text-decoration: none; font-size: 0.95rem;">
+                        Need an account? Click here to Register
+                    </a>
+                </div>
+
+                <!-- Registration Form (hidden by default) -->
+                <form id="register-form" style="display: none; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label for="reg-username">New Username</label>
+                        <input type="text" id="reg-username" class="form-input" placeholder="Choose username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email">Email Address</label>
+                        <input type="email" id="reg-email" class="form-input" placeholder="you@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Password (min 6 characters)</label>
+                        <input type="password" id="reg-password" class="form-input" placeholder="••••••••" minlength="6" required>
+                    </div>
+                    <button type="submit" id="reg-btn" class="btn-submit" style="background-color: #EE9972;">Create Account</button>
+                    <div id="reg-status" class="booking-alert"></div>
+                </form>
+
+                <!-- User Session Card (shown when logged in) -->
+                <div id="user-session-card" style="display: none; text-align: center;">
+                    <p style="font-weight: 700; font-size: 1.1rem; color: #495E57; margin-bottom: 0.35rem;" id="session-user-msg"></p>
+                    <div id="session-role-badge" style="margin-bottom: 0.75rem;"></div>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem; word-break: break-all;" id="session-token-msg"></p>
+                    <button type="button" id="logout-btn" class="btn-submit" style="background-color: #c0392b;">Logout</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================
+         Backend REST API Quick Access
+         ==================================================================== -->
+    <section class="api-section">
+        <div class="api-container">
+            <h2 class="section-title">Django REST Framework Endpoints</h2>
+            <p class="section-subtitle">Coursera Back-End Developer Capstone Endpoints</p>
+
+            <div class="api-cards-grid">
+                <div class="api-box">
+                    <h3>1. Menu API</h3>
+                    <p>CRUD operations for restaurant dishes and pricing.</p>
+                    <ul class="api-links">
+                        <li><span class="method-tag">GET/POST</span> <a href="http://127.0.0.1:8000/api/menu/" target="_blank">/api/menu/</a></li>
+                        <li><span class="method-tag">GET/PUT/DEL</span> <code>/api/menu/&lt;id&gt;/</code></li>
+                    </ul>
+                </div>
+
+                <div class="api-box">
+                    <h3>2. Booking API</h3>
+                    <p>Table reservations with customer details and associated user.</p>
+                    <ul class="api-links">
+                        <li><span class="method-tag">GET/POST</span> <a href="http://127.0.0.1:8000/api/booking/" target="_blank">/api/booking/</a></li>
+                        <li><span class="method-tag">GET/PUT/DEL</span> <code>/api/booking/&lt;id&gt;/</code></li>
+                    </ul>
+                </div>
+
+                <div class="api-box">
+                    <h3>3. Auth &amp; Token API</h3>
+                    <p>Customer registration and token-based authentication.</p>
+                    <ul class="api-links">
+                        <li><span class="method-tag">POST</span> <a href="http://127.0.0.1:8000/api/register/" target="_blank">/api/register/</a></li>
+                        <li><span class="method-tag">POST</span> <a href="http://127.0.0.1:8000/api/api-token-auth/" target="_blank">/api/api-token-auth/</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================
+         Footer
+         ==================================================================== -->
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-col">
+                <h4>🍋 Little Lemon</h4>
+                <p>Authentic Mediterranean recipes served with a modern twist in Chicago.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Navigation</h4>
+                <ul>
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#menu">Menu</a></li>
+                    <li><a href="#reservations">Reservations</a></li>
+                    <li><a href="#order">Order</a></li>
+                    <li><a href="#login">Login</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul>
+                    <li>📍 Chicago, IL</li>
+                    <li>📞 (312) 555-0198</li>
+                    <li>✉️ info@littlelemon.com</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-copy">
+            &copy; 2026 Little Lemon Restaurant · Meta Back-End Developer Capstone Project
+        </div>
+    </footer>
+
+    <!-- ====================================================================
+         Frontend JavaScript Integration
+         - Dynamic Menu Fetching & Category Filtering
+         - Admin Add / Edit / Delete (POST, PUT, DELETE /api/menu/)
+         - Reservation API Integration (POST /api/booking/)
+         - User Authentication (Login, Register, Logout)
+         ==================================================================== -->
+    <script>
+        var API_BASE = 'http://127.0.0.1:8000';
+        var allMenuItems = [];
+        var activeCategory = 'all';
+
+        var FALLBACK_IMAGES = {
+            starters: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=800&q=80',
+            main: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=800&q=80',
+            desserts: 'https://images.unsplash.com/photo-1519915028121-7d3463d20b13?auto=format&fit=crop&w=800&q=80',
+            drinks: 'https://images.unsplash.com/photo-1621263764928-df1444c5e859?auto=format&fit=crop&w=800&q=80',
+            default: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80'
+        };
+
+        var CATEGORY_NAMES = {
+            starters: 'Starters',
+            main: 'Main Course',
+            desserts: 'Desserts',
+            drinks: 'Drinks'
+        };
+
+        function isUserAdmin() {
+            return localStorage.getItem('littlelemon_is_staff') === 'true';
+        }
+
+        var SEEDED_MENU_ITEMS = [
+            { id: 1, title: "Greek Salad", category: "starters", category_display: "Starters", price: "12.99", inventory: 25, featured: true, image_url: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=800&q=80", description: "Crispy lettuce, peppers, olives and our Chicago-style feta cheese, garnished with crunchy garlic and rosemary croutons." },
+            { id: 2, title: "Bruschetta", category: "starters", category_display: "Starters", price: "7.99", inventory: 30, featured: true, image_url: "https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?auto=format&fit=crop&w=800&q=80", description: "Grilled sourdough rubbed with garlic, topped with ripe tomatoes, fresh basil, sea salt and extra-virgin olive oil." },
+            { id: 3, title: "Pan-Seared Salmon", category: "main", category_display: "Main Course", price: "24.50", inventory: 15, featured: true, image_url: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=800&q=80", description: "Crispy-skin salmon over wilted spinach with a cucumber and tomato relish and a light balsamic reduction." },
+            { id: 4, title: "Lemon Herb Risotto", category: "main", category_display: "Main Course", price: "18.00", inventory: 20, featured: false, image_url: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&w=800&q=80", description: "Creamy arborio rice slow-cooked with lemon zest, parmesan, wild mushrooms and fresh garden herbs." },
+            { id: 5, title: "Slow-Grilled Lamb Ribs", category: "main", category_display: "Main Course", price: "26.00", inventory: 12, featured: false, image_url: "https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=800&q=80", description: "Tender lamb ribs marinated in oregano, garlic and lemon, char-grilled and served with seasonal greens." },
+            { id: 6, title: "Lemon Dessert", category: "desserts", category_display: "Desserts", price: "6.50", inventory: 30, featured: true, image_url: "https://images.unsplash.com/photo-1519915028121-7d3463d20b13?auto=format&fit=crop&w=800&q=80", description: "Straight from grandma's recipe book - every ingredient sourced to be as authentic as can be imagined." },
+            { id: 7, title: "Classic Tiramisu", category: "desserts", category_display: "Desserts", price: "7.50", inventory: 20, featured: false, image_url: "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=800&q=80", description: "Espresso-soaked ladyfingers layered with whipped mascarpone and finished with a dusting of cocoa." },
+            { id: 8, title: "Orange Blossom Crepes", category: "desserts", category_display: "Desserts", price: "6.99", inventory: 18, featured: false, image_url: "https://images.unsplash.com/photo-1519676867240-f03562e64548?auto=format&fit=crop&w=800&q=80", description: "Delicate crepes with fresh orange, whipped cream, toasted almonds and a drizzle of wildflower honey." },
+            { id: 9, title: "Fresh Mint Lemonade", category: "drinks", category_display: "Drinks", price: "4.50", inventory: 50, featured: false, image_url: "https://images.unsplash.com/photo-1621263764928-df1444c5e859?auto=format&fit=crop&w=800&q=80", description: "Freshly squeezed lemons and limes muddled with garden mint, served over crushed ice." },
+            { id: 10, title: "Iced Lime Tea", category: "drinks", category_display: "Drinks", price: "3.99", inventory: 50, featured: false, image_url: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=800&q=80", description: "House-brewed black tea chilled with lime and a hint of mint." },
+            { id: 11, title: "Espresso", category: "drinks", category_display: "Drinks", price: "2.99", inventory: 80, featured: false, image_url: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&w=800&q=80", description: "A rich, velvety single shot pulled from our signature roast." },
+            { id: 12, title: "Chocolate Frappe", category: "drinks", category_display: "Drinks", price: "5.50", inventory: 40, featured: false, image_url: "https://images.unsplash.com/photo-1577805947697-89e18249d767?auto=format&fit=crop&w=800&q=80", description: "Blended chocolate shake topped with whipped cream and cocoa." }
+        ];
+
+        // 1. Dynamic Menu Fetching & Rendering
+        async function fetchMenuItems() {
+            try {
+                var response = await fetch(API_BASE + '/api/menu/');
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                var items = await response.json();
+                allMenuItems = (Array.isArray(items) && items.length > 0) ? items : SEEDED_MENU_ITEMS;
+                renderMenuCards();
+            } catch (err) {
+                allMenuItems = SEEDED_MENU_ITEMS;
+                renderMenuCards();
+            }
+        }
+
+        function renderMenuCards() {
+            var container = document.getElementById('menu-cards-container');
+            var isAdmin = isUserAdmin();
+
+            var filtered = allMenuItems;
+            if (activeCategory !== 'all') {
+                filtered = allMenuItems.filter(function(item) {
+                    return (item.category || '').toLowerCase() === activeCategory;
+                });
+            }
+
+            if (!filtered || filtered.length === 0) {
+                container.innerHTML =
+                    '<div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: #fff; border-radius: 12px; border: 1px dashed #ccc;">' +
+                    '<p style="font-size: 1.1rem; color: #666;">No dishes found in this category.</p>' +
+                    (isAdmin ? '<button type="button" class="btn-add-item" onclick="openAddMenuModal()" style="margin-top: 1rem;">+ Add a Dish</button>' : '') +
+                    '</div>';
+                return;
+            }
+
+            var html = '';
+            filtered.forEach(function(item) {
+                var catKey = (item.category || 'main').toLowerCase();
+                var catLabel = item.category_display || CATEGORY_NAMES[catKey] || 'Main Course';
+                var imgSrc = item.image_url || FALLBACK_IMAGES[catKey] || FALLBACK_IMAGES.default;
+                var desc = item.description || 'Traditional Mediterranean recipe prepared with fresh seasonal ingredients.';
+                var priceStr = parseFloat(item.price).toFixed(2);
+                var inventory = item.inventory !== undefined ? item.inventory : 10;
+
+                var adminButtonsHtml = '';
+                if (isAdmin) {
+                    adminButtonsHtml =
+                        '<div class="admin-card-actions">' +
+                            '<button type="button" class="btn-card-edit" onclick="openEditMenuModal(' + item.id + ')">✏️ Edit Dish</button>' +
+                            '<button type="button" class="btn-card-delete" onclick="deleteMenuItem(' + item.id + ', \'' + escapeQuotes(item.title) + '\')">🗑️ Delete</button>' +
+                        '</div>';
+                }
+
+                html +=
+                    '<article class="special-card" data-id="' + item.id + '">' +
+                        '<div class="card-img-container">' +
+                            '<img src="' + imgSrc + '" alt="' + escapeQuotes(item.title) + '" onerror="this.onerror=null;this.src=\'' + FALLBACK_IMAGES.default + '\';">' +
+                            '<span class="card-category-badge">' + catLabel + '</span>' +
+                            '<span class="card-inventory-badge">Stock: ' + inventory + '</span>' +
+                        '</div>' +
+                        '<div class="special-card-content">' +
+                            '<div class="special-card-title-row">' +
+                                '<h3>' + escapeHtml(item.title) + '</h3>' +
+                                '<span class="special-card-price">$' + priceStr + '</span>' +
+                            '</div>' +
+                            '<p class="special-card-desc">' + escapeHtml(desc) + '</p>' +
+                            '<a href="#order" class="delivery-link">' +
+                                '<span>Order a delivery</span> 🛵' +
+                            '</a>' +
+                            adminButtonsHtml +
+                        '</div>' +
+                    '</article>';
+            });
+
+            container.innerHTML = html;
+        }
+
+        function escapeQuotes(str) {
+            return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        // Category Filter Buttons
+        document.querySelectorAll('.category-filter-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.category-filter-btn').forEach(function(b) {
+                    b.classList.remove('active');
+                });
+                this.classList.add('active');
+                activeCategory = this.dataset.category;
+                renderMenuCards();
+            });
+        });
+
+        // 2. Admin CRUD Operations for Menu (POST, PUT, DELETE)
+        var modal = document.getElementById('menu-modal');
+        var modalForm = document.getElementById('menu-item-form');
+        var modalAlert = document.getElementById('modal-alert');
+        var modalTitle = document.getElementById('modal-title');
+
+        function openAddMenuModal() {
+            modalForm.reset();
+            document.getElementById('item-id').value = '';
+            document.getElementById('item-category').value = activeCategory !== 'all' ? activeCategory : 'main';
+            document.getElementById('item-inventory').value = '20';
+            modalTitle.textContent = 'Add New Menu Item';
+            modalAlert.style.display = 'none';
+            modal.classList.add('open');
+        }
+
+        function openEditMenuModal(id) {
+            var item = allMenuItems.find(function(i) { return i.id === id; });
+            if (!item) return;
+
+            document.getElementById('item-id').value = item.id;
+            document.getElementById('item-title').value = item.title;
+            document.getElementById('item-category').value = (item.category || 'main').toLowerCase();
+            document.getElementById('item-price').value = item.price;
+            document.getElementById('item-inventory').value = item.inventory;
+            document.getElementById('item-image-url').value = item.image_url || '';
+            document.getElementById('item-description').value = item.description || '';
+            document.getElementById('item-featured').checked = !!item.featured;
+
+            modalTitle.textContent = 'Edit Menu Item: ' + item.title;
+            modalAlert.style.display = 'none';
+            modal.classList.add('open');
+        }
+
+        function closeMenuModal() {
+            modal.classList.remove('open');
+            modalForm.reset();
+        }
+
+        document.getElementById('modal-close-btn').addEventListener('click', closeMenuModal);
+        document.getElementById('modal-cancel-btn').addEventListener('click', closeMenuModal);
+        document.getElementById('admin-add-item-btn').addEventListener('click', openAddMenuModal);
+        document.getElementById('admin-banner-add-btn').addEventListener('click', openAddMenuModal);
+
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeMenuModal();
+        });
+
+        // Submit Add / Edit Form (POST or PUT /api/menu/)
+        modalForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var id = document.getElementById('item-id').value;
+            var title = document.getElementById('item-title').value.trim();
+            var category = document.getElementById('item-category').value;
+            var price = parseFloat(document.getElementById('item-price').value);
+            var inventory = parseInt(document.getElementById('item-inventory').value, 10);
+            var imageUrl = document.getElementById('item-image-url').value.trim();
+            var description = document.getElementById('item-description').value.trim();
+            var featured = document.getElementById('item-featured').checked;
+            var submitBtn = document.getElementById('modal-submit-btn');
+
+            var token = localStorage.getItem('littlelemon_token');
+            if (!token) {
+                modalAlert.style.display = 'block';
+                modalAlert.style.backgroundColor = '#fde8e8';
+                modalAlert.style.color = '#c81e1e';
+                modalAlert.textContent = '❌ You must be logged in with staff permissions to modify the menu.';
+                return;
+            }
+
+            var payload = {
+                title: title,
+                category: category,
+                price: price,
+                inventory: inventory,
+                image_url: imageUrl,
+                description: description,
+                featured: featured
+            };
+
+            var isEdit = Boolean(id);
+            var url = isEdit ? (API_BASE + '/api/menu/' + id + '/') : (API_BASE + '/api/menu/');
+            var method = isEdit ? 'PUT' : 'POST';
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            try {
+                var response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Token ' + token
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                var data = await response.json();
+
+                if (response.ok) {
+                    closeMenuModal();
+                    await fetchMenuItems(); // Refresh menu dynamically
+                } else {
+                    var errStr = '';
+                    for (var key in data) {
+                        errStr += key + ': ' + (Array.isArray(data[key]) ? data[key].join(' ') : data[key]) + ' ';
+                    }
+                    modalAlert.style.display = 'block';
+                    modalAlert.style.backgroundColor = '#fde8e8';
+                    modalAlert.style.color = '#c81e1e';
+                    modalAlert.textContent = '❌ ' + (errStr || 'Failed to save menu item.');
+                }
+            } catch (err) {
+                modalAlert.style.display = 'block';
+                modalAlert.style.backgroundColor = '#fde8e8';
+                modalAlert.style.color = '#c81e1e';
+                modalAlert.textContent = '❌ Network error saving menu item: ' + err.message;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save Dish';
+            }
+        });
+
+        // Delete Menu Item (DELETE /api/menu/<id>/)
+        async function deleteMenuItem(id, title) {
+            if (!confirm('Are you sure you want to permanently delete "' + title + '" from the menu?')) {
+                return;
+            }
+
+            var token = localStorage.getItem('littlelemon_token');
+            if (!token) {
+                alert('You must be logged in with staff permissions to delete dishes.');
+                return;
+            }
+
+            try {
+                var response = await fetch(API_BASE + '/api/menu/' + id + '/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Token ' + token
+                    }
+                });
+
+                if (response.status === 204 || response.ok) {
+                    await fetchMenuItems(); // Re-render dynamically
+                } else {
+                    var data = await response.json().catch(function() { return {}; });
+                    alert('Could not delete item: ' + (data.detail || 'Permission denied.'));
+                }
+            } catch (err) {
+                alert('Network error deleting dish: ' + err.message);
+            }
+        }
+
+        // 3. User Session & Admin Controls Visibility
+        function updateUserSessionUI() {
+            var token = localStorage.getItem('littlelemon_token');
+            var username = localStorage.getItem('littlelemon_username');
+            var isStaff = localStorage.getItem('littlelemon_is_staff') === 'true';
+
+            var loginForm = document.getElementById('login-form');
+            var registerToggle = document.getElementById('toggle-register-btn');
+            var sessionCard = document.getElementById('user-session-card');
+            var sessionUserMsg = document.getElementById('session-user-msg');
+            var sessionTokenMsg = document.getElementById('session-token-msg');
+            var sessionRoleBadge = document.getElementById('session-role-badge');
+            var navLoginLink = document.getElementById('nav-login-link');
+            var adminBanner = document.getElementById('admin-banner');
+            var adminAddBtn = document.getElementById('admin-add-item-btn');
+
+            if (token && username) {
+                if (loginForm) loginForm.style.display = 'none';
+                if (registerToggle) registerToggle.style.display = 'none';
+                if (sessionCard) sessionCard.style.display = 'block';
+                if (sessionUserMsg) sessionUserMsg.textContent = 'Signed in as: ' + username;
+                if (sessionTokenMsg) sessionTokenMsg.textContent = 'Token: ' + token.substring(0, 14) + '...';
+                if (sessionRoleBadge) {
+                    sessionRoleBadge.innerHTML = isStaff
+                        ? '<span class="admin-badge" style="font-size: 0.85rem; padding: 0.3rem 0.8rem;">Staff / Administrator</span>'
+                        : '<span style="background: #e2e8f0; color: #475569; font-size: 0.8rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px;">Customer</span>';
+                }
+                if (navLoginLink) navLoginLink.textContent = username;
+
+                if (isStaff) {
+                    if (adminBanner) adminBanner.style.display = 'flex';
+                    if (adminAddBtn) adminAddBtn.style.display = 'inline-block';
+                } else {
+                    if (adminBanner) adminBanner.style.display = 'none';
+                    if (adminAddBtn) adminAddBtn.style.display = 'none';
+                }
+            } else {
+                if (loginForm) loginForm.style.display = 'block';
+                if (registerToggle) registerToggle.style.display = 'inline';
+                if (sessionCard) sessionCard.style.display = 'none';
+                if (navLoginLink) navLoginLink.textContent = 'Login';
+                if (adminBanner) adminBanner.style.display = 'none';
+                if (adminAddBtn) adminAddBtn.style.display = 'none';
+            }
+
+            renderMenuCards();
+        }
+
+        // 4. Table Booking & Login Submissions
+        document.getElementById('booking-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var alertBox = document.getElementById('booking-status');
+            var submitBtn = document.getElementById('booking-submit-btn');
+
+            var name = document.getElementById('booking-name').value.trim();
+            var guests = parseInt(document.getElementById('booking-guests').value, 10);
+            var dateVal = document.getElementById('booking-date').value;
+
+            if (!name || isNaN(guests) || !dateVal) {
+                alertBox.style.display = 'block';
+                alertBox.style.backgroundColor = '#fde8e8';
+                alertBox.style.color = '#c81e1e';
+                alertBox.textContent = '⚠️ Please fill out all reservation fields.';
+                return;
+            }
+
+            var payload = {
+                name: name,
+                no_of_guests: guests,
+                booking_date: new Date(dateVal).toISOString()
+            };
+
+            var headers = { 'Content-Type': 'application/json' };
+            var token = localStorage.getItem('littlelemon_token');
+            if (token) headers['Authorization'] = 'Token ' + token;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting reservation...';
+
+            try {
+                var response = await fetch(API_BASE + '/api/booking/', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+                var data = await response.json();
+
+                if (response.ok || response.status === 201) {
+                    alertBox.style.display = 'block';
+                    alertBox.style.backgroundColor = '#e6f7ee';
+                    alertBox.style.color = '#176538';
+                    alertBox.textContent = '🎉 Table reserved successfully! Booking #' + data.id +
+                        ' for ' + data.name + ' (' + data.no_of_guests + ' guests) on ' +
+                        new Date(data.booking_date).toLocaleString();
+                    this.reset();
+                } else {
+                    var errorMsg = 'Failed to create reservation: ';
+                    if (data.no_of_guests) errorMsg += data.no_of_guests.join(' ');
+                    else if (data.booking_date) errorMsg += data.booking_date.join(' ');
+                    else if (data.name) errorMsg += data.name.join(' ');
+                    else if (data.detail) errorMsg += data.detail;
+                    else errorMsg += JSON.stringify(data);
+
+                    alertBox.style.display = 'block';
+                    alertBox.style.backgroundColor = '#fde8e8';
+                    alertBox.style.color = '#c81e1e';
+                    alertBox.textContent = '❌ ' + errorMsg;
+                }
+            } catch (err) {
+                alertBox.style.display = 'block';
+                alertBox.style.backgroundColor = '#fde8e8';
+                alertBox.style.color = '#c81e1e';
+                alertBox.textContent = '❌ Network error connecting to Django server.';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Confirm Reservation';
+            }
+        });
+
+        // Login Handler
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var alertBox = document.getElementById('login-status');
+            var loginBtn = document.getElementById('login-btn');
+            var username = document.getElementById('user-login').value.trim();
+            var password = document.getElementById('user-password').value;
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Authenticating...';
+
+            try {
+                var response = await fetch(API_BASE + '/api/api-token-auth/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: username, password: password })
+                });
+                var data = await response.json();
+
+                if (response.ok && data.token) {
+                    localStorage.setItem('littlelemon_token', data.token);
+                    localStorage.setItem('littlelemon_username', username);
+                    localStorage.setItem('littlelemon_is_staff', data.is_staff ? 'true' : 'false');
+                    alertBox.style.display = 'block';
+                    alertBox.style.backgroundColor = '#e6f7ee';
+                    alertBox.style.color = '#176538';
+                    alertBox.textContent = '✅ Login successful!';
+                    this.reset();
+                    setTimeout(updateUserSessionUI, 300);
+                } else {
+                    alertBox.style.display = 'block';
+                    alertBox.style.backgroundColor = '#fde8e8';
+                    alertBox.style.color = '#c81e1e';
+                    alertBox.textContent = '❌ Invalid username or password.';
+                }
+            } catch (err) {
+                alertBox.style.display = 'block';
+                alertBox.style.backgroundColor = '#fde8e8';
+                alertBox.style.color = '#c81e1e';
+                alertBox.textContent = '❌ Could not reach Django Auth API.';
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login / Obtain Token';
+            }
+        });
+
+        // Register Toggle
+        var toggleRegBtn = document.getElementById('toggle-register-btn');
+        if (toggleRegBtn) {
+            toggleRegBtn.addEventListener('click', function() {
+                var regForm = document.getElementById('register-form');
+                var loginForm = document.getElementById('login-form');
+                if (regForm.style.display === 'none') {
+                    regForm.style.display = 'block';
+                    loginForm.style.display = 'none';
+                    this.textContent = 'Already have an account? Click to Login';
+                } else {
+                    regForm.style.display = 'none';
+                    loginForm.style.display = 'block';
+                    this.textContent = 'Need an account? Click here to Register';
+                }
+            });
+        }
+
+        // Register Handler
+        var regForm = document.getElementById('register-form');
+        if (regForm) {
+            regForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var alertBox = document.getElementById('reg-status');
+                var regBtn = document.getElementById('reg-btn');
+                var username = document.getElementById('reg-username').value.trim();
+                var email = document.getElementById('reg-email').value.trim();
+                var password = document.getElementById('reg-password').value;
+
+                regBtn.disabled = true;
+                regBtn.textContent = 'Creating account...';
+
+                try {
+                    var response = await fetch(API_BASE + '/api/register/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: username, email: email, password: password })
+                    });
+                    var data = await response.json();
+
+                    if (response.ok || response.status === 201) {
+                        alertBox.style.display = 'block';
+                        alertBox.style.backgroundColor = '#e6f7ee';
+                        alertBox.style.color = '#176538';
+                        alertBox.textContent = '🎉 Account created for ' + username + '! You can now log in.';
+                        this.reset();
+                    } else {
+                        var errStr = '';
+                        if (data.username) errStr += data.username.join(' ');
+                        if (data.password) errStr += ' ' + data.password.join(' ');
+                        alertBox.style.display = 'block';
+                        alertBox.style.backgroundColor = '#fde8e8';
+                        alertBox.style.color = '#c81e1e';
+                        alertBox.textContent = '❌ ' + (errStr || 'Registration failed.');
+                    }
+                } catch (err) {
+                    alertBox.style.display = 'block';
+                    alertBox.style.backgroundColor = '#fde8e8';
+                    alertBox.style.color = '#c81e1e';
+                    alertBox.textContent = '❌ Failed to reach registration API.';
+                } finally {
+                    regBtn.disabled = false;
+                    regBtn.textContent = 'Create Account';
+                }
+            });
+        }
+
+        // Logout Handler
+        var logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async function() {
+                var token = localStorage.getItem('littlelemon_token');
+                if (token) {
+                    try {
+                        await fetch(API_BASE + '/api/logout/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Token ' + token
+                            }
+                        });
+                    } catch (e) {}
+                }
+                localStorage.removeItem('littlelemon_token');
+                localStorage.removeItem('littlelemon_username');
+                localStorage.removeItem('littlelemon_is_staff');
+                updateUserSessionUI();
+            });
+        }
+
+        // Initialization
+        (function() {
+            var dateInput = document.getElementById('booking-date');
+            if (dateInput) {
+                var d = new Date();
+                d.setDate(d.getDate() + 1);
+                d.setHours(19, 30, 0, 0);
+                dateInput.value = d.toISOString().slice(0, 16);
+            }
+            updateUserSessionUI();
+            fetchMenuItems();
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Contact Us{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="page-hero-inner">
+        <span class="hero-eyebrow">Get in Touch</span>
+        <h1>Contact Little Lemon</h1>
+        <p>We'd love to hear from you. Questions, feedback, or private dining inquiries.</p>
+    </div>
+</section>
+
+<section class="reservation-section">
+    <div class="reservation-container reservation-layout">
+        <div class="booking-form-wrapper">
+            <h2 class="form-title">Send Us a Message</h2>
+            <form id="contact-form">
+                <div class="form-group">
+                    <label for="contact-name">Your Name</label>
+                    <input type="text" id="contact-name" class="form-input" placeholder="e.g. Rahul Sharma" required minlength="2">
+                </div>
+                <div class="form-group">
+                    <label for="contact-email">Email Address</label>
+                    <input type="email" id="contact-email" class="form-input" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="contact-subject">Subject</label>
+                    <input type="text" id="contact-subject" class="form-input" placeholder="Private dining / general inquiry">
+                </div>
+                <div class="form-group">
+                    <label for="contact-message">Message</label>
+                    <textarea id="contact-message" class="form-input" rows="5" placeholder="Write your message here..." required minlength="10"></textarea>
+                </div>
+                <button type="submit" id="contact-submit" class="btn-submit">Send Message</button>
+                <div id="contact-status" class="form-alert" style="display: none;"></div>
+            </form>
+        </div>
+
+        <aside class="info-card">
+            <h3>Visit Little Lemon</h3>
+            <ul class="info-list">
+                <li><strong>Address</strong><span>742 W Lemon Street<br>Chicago, IL 60607</span></li>
+                <li><strong>Phone</strong><span><a href="tel:+13125550198">(312) 555-0198</a></span></li>
+                <li><strong>Email</strong><span><a href="mailto:hello@littlelemon.com">hello@littlelemon.com</a></span></li>
+                <li><strong>Hours</strong><span>Mon&ndash;Thu: 11:00&ndash;22:00<br>Fri&ndash;Sat: 11:00&ndash;23:00<br>Sun: 12:00&ndash;21:00</span></li>
+            </ul>
+        </aside>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var LL = window.LittleLemon;
+    var form = document.getElementById('contact-form');
+    var alertBox = document.getElementById('contact-status');
+    var btn = document.getElementById('contact-submit');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var name = document.getElementById('contact-name').value.trim();
+        var email = document.getElementById('contact-email').value.trim();
+        var subject = document.getElementById('contact-subject').value.trim();
+        var message = document.getElementById('contact-message').value.trim();
+
+        LL.setLoading(btn, true, 'Sending message...');
+        LL.hideAlert(alertBox);
+
+        try {
+            var res = await LL.api('/api/contact/', {
+                method: 'POST',
+                body: { name: name, email: email, subject: subject, message: message }
+            });
+
+            LL.setLoading(btn, false);
+            if (res.ok || res.status === 201) {
+                LL.showAlert(alertBox, 'success', 'Thank you! Your message has been sent to Little Lemon staff.');
+                form.reset();
+            } else {
+                LL.showAlert(alertBox, 'error', LL.formatApiErrors(res.data, 'Could not send your message.'));
+            }
+        } catch(err) {
+            LL.setLoading(btn, false);
+            LL.showAlert(alertBox, 'error', 'Error connecting to the contact API.');
+        }
+    });
+});
+</script>
+{% endblock %}
+

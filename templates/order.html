@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}Order Online{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="page-hero-inner">
+        <span class="hero-eyebrow">Order Online</span>
+        <h1>Build your order</h1>
+        <p>Add dishes to your cart, adjust quantities and review your order summary.</p>
+    </div>
+</section>
+
+<section class="order-layout">
+    <div class="order-menu">
+        <div class="category-tabs" id="order-tabs">
+            <button type="button" class="tab active" data-category="all">All</button>
+            <button type="button" class="tab" data-category="starters">Starters</button>
+            <button type="button" class="tab" data-category="main">Main Course</button>
+            <button type="button" class="tab" data-category="desserts">Desserts</button>
+            <button type="button" class="tab" data-category="drinks">Drinks</button>
+        </div>
+        <div class="specials-grid order-grid" id="order-grid">
+            <div class="state-box state-loading">Loading menu...</div>
+        </div>
+    </div>
+
+    <aside class="order-summary" id="order-summary">
+        <h2>Order Summary</h2>
+        <div id="cart-items"></div>
+        <div class="summary-totals">
+            <div class="summary-row"><span>Items</span><span id="summary-count">0</span></div>
+            <div class="summary-row total"><span>Total</span><span id="summary-total">$0.00</span></div>
+        </div>
+        <button type="button" class="btn-outline-dark full" id="clear-cart">Clear cart</button>
+        <p class="form-note">
+            Online payment is not available yet. Please show this summary to our staff or call
+            <a href="tel:+13125550198">(312) 555-0198</a> to place your order.
+        </p>
+    </aside>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var LL = window.LittleLemon;
+    var grid = document.getElementById('order-grid');
+    var tabs = document.querySelectorAll('#order-tabs .tab');
+    var menuItems = [];
+    var currentCategory = 'all';
+
+    function renderMenu() {
+        var items = currentCategory === 'all'
+            ? menuItems
+            : menuItems.filter(function (i) { return i.category === currentCategory; });
+        grid.innerHTML = items.length
+            ? items.map(function (i) { return LL.menuCardHtml(i, { showAdd: true }); }).join('')
+            : LL.stateHtml('empty', 'No dishes in this category.');
+    }
+
+    function renderCart() {
+        var items = LL.cart.read();
+        var box = document.getElementById('cart-items');
+        if (!items.length) {
+            box.innerHTML = '<p class="cart-empty">Your cart is empty. Add a dish to get started.</p>';
+        } else {
+            box.innerHTML = items.map(function (i) {
+                return '<div class="cart-item">' +
+                    '<div class="cart-item-info"><strong>' + LL.escapeHtml(i.title) + '</strong>' +
+                    '<span>' + LL.formatPrice(i.price) + ' each</span></div>' +
+                    '<div class="qty-control">' +
+                        '<button type="button" data-qty="-1" data-id="' + i.id + '" aria-label="Decrease">&minus;</button>' +
+                        '<span>' + i.quantity + '</span>' +
+                        '<button type="button" data-qty="1" data-id="' + i.id + '" aria-label="Increase">+</button>' +
+                    '</div>' +
+                    '<div class="cart-line-total">' + LL.formatPrice(i.price * i.quantity) + '</div>' +
+                    '<button type="button" class="cart-remove" data-remove="' + i.id + '" aria-label="Remove">&times;</button>' +
+                '</div>';
+            }).join('');
+        }
+        document.getElementById('summary-count').textContent = LL.cart.count();
+        document.getElementById('summary-total').textContent = LL.formatPrice(LL.cart.total());
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            currentCategory = tab.dataset.category;
+            renderMenu();
+        });
+    });
+
+    grid.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-add-id]');
+        if (!btn) return;
+        var id = Number(btn.dataset.addId);
+        var item = menuItems.find(function (i) { return i.id === id; });
+        if (!item) return;
+        LL.cart.add(item);
+        btn.textContent = 'Added \u2713';
+        setTimeout(function () { btn.textContent = '+ Add to Cart'; }, 900);
+    });
+
+    document.getElementById('cart-items').addEventListener('click', function (e) {
+        var qtyBtn = e.target.closest('[data-qty]');
+        var removeBtn = e.target.closest('[data-remove]');
+        if (qtyBtn) {
+            var id = Number(qtyBtn.dataset.id);
+            var line = LL.cart.read().find(function (i) { return i.id === id; });
+            if (line) LL.cart.setQuantity(id, line.quantity + Number(qtyBtn.dataset.qty));
+        } else if (removeBtn) {
+            LL.cart.remove(Number(removeBtn.dataset.remove));
+        }
+    });
+
+    document.getElementById('clear-cart').addEventListener('click', function () { LL.cart.clear(); });
+    document.addEventListener('cart:changed', renderCart);
+
+    LL.api('/api/menu/').then(function (res) {
+        if (!res.ok) {
+            grid.innerHTML = LL.stateHtml('error', LL.formatApiErrors(res.data, 'Could not load the menu.'));
+            return;
+        }
+        menuItems = res.data || [];
+        // Keep cart prices in sync with the current menu and drop removed dishes
+        var byId = {};
+        menuItems.forEach(function (m) { byId[m.id] = m; });
+        var synced = LL.cart.read().filter(function (c) { return byId[c.id]; }).map(function (c) {
+            c.price = Number(byId[c.id].price);
+            c.title = byId[c.id].title;
+            return c;
+        });
+        LL.cart.write(synced);
+        renderMenu();
+    });
+
+    renderCart();
+});
+</script>
+{% endblock %}
+

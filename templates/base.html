@@ -1,0 +1,100 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Little Lemon Restaurant{% endblock %} | Little Lemon Chicago</title>
+    <meta name="description" content="Little Lemon - a family-owned Mediterranean restaurant in Chicago. Fresh food, fresh feelings.">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+    <!-- ================================================================
+         Header & Navigation (shared across all pages)
+         ================================================================ -->
+    <header class="site-header">
+        <div class="header-container">
+            <a href="{% url 'home' %}" class="logo-link" title="Little Lemon Restaurant">
+                <img src="{% static 'Logo.svg' %}" alt="Little Lemon" class="brand-logo-svg">
+            </a>
+
+            <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+
+            <nav class="site-nav" id="site-nav">
+                <ul>
+                    <li><a href="{% url 'home' %}" {% if active_page == 'home' %}class="active"{% endif %}>Home</a></li>
+                    <li><a href="{% url 'about' %}" {% if active_page == 'about' %}class="active"{% endif %}>About</a></li>
+                    <li><a href="{% url 'menu' %}" {% if active_page == 'menu' %}class="active"{% endif %}>Menu</a></li>
+                    <li><a href="{% url 'reservations' %}" {% if active_page == 'reservations' %}class="active"{% endif %}>Reservations</a></li>
+                    <li>
+                        <a href="{% url 'order' %}" {% if active_page == 'order' %}class="active"{% endif %}>
+                            Order <span class="cart-badge" id="cart-count" style="display:none;">0</span>
+                        </a>
+                    </li>
+                    <li><a href="{% url 'contact-page' %}" {% if active_page == 'contact' %}class="active"{% endif %}>Contact</a></li>
+                </ul>
+                <div class="nav-auth" id="nav-auth">
+                    <a href="{% url 'login' %}" class="nav-btn nav-btn-outline">Login</a>
+                    <a href="{% url 'register-page' %}" class="nav-btn">Register</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ================================================================
+         Footer (shared across all pages)
+         ================================================================ -->
+    <footer class="site-footer">
+        <div class="footer-container footer-4col">
+            <div class="footer-col">
+                <div class="footer-logo">
+                    <img src="{% static 'Logo.svg' %}" alt="Little Lemon">
+                </div>
+                <p>A family-owned Mediterranean restaurant serving traditional recipes with a modern twist in the heart of Chicago.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="{% url 'home' %}">Home</a></li>
+                    <li><a href="{% url 'about' %}">About</a></li>
+                    <li><a href="{% url 'menu' %}">Menu</a></li>
+                    <li><a href="{% url 'reservations' %}">Reservations</a></li>
+                    <li><a href="{% url 'order' %}">Order Online</a></li>
+                    <li><a href="{% url 'contact-page' %}">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul>
+                    <li>&#128205; 742 W Lemon Street, Chicago, IL 60607</li>
+                    <li>&#128222; <a href="tel:+13125550198">(312) 555-0198</a></li>
+                    <li>&#9993;&#65039; <a href="mailto:hello@littlelemon.com">hello@littlelemon.com</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Opening Hours</h4>
+                <ul class="hours-list">
+                    <li><span>Mon &ndash; Thu</span><span>11:00 &ndash; 22:00</span></li>
+                    <li><span>Fri &ndash; Sat</span><span>11:00 &ndash; 23:00</span></li>
+                    <li><span>Sunday</span><span>12:00 &ndash; 21:00</span></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-copy">
+            &copy; {{ current_year|default:"2026" }} Little Lemon Restaurant, Chicago. All rights reserved.
+            &middot; Meta Back-End Developer Capstone Project
+        </div>
+    </footer>
+
+    <script src="{% static 'js/app.js' %}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Customer Login{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="page-hero-inner">
+        <span class="hero-eyebrow">Customer Portal</span>
+        <h1>Account Login</h1>
+        <p>Sign in to manage your table reservations and restaurant preferences.</p>
+    </div>
+</section>
+
+<section class="reservation-section">
+    <div class="reservation-container" style="max-width: 520px;">
+        <div class="booking-form-wrapper">
+            <h2 class="form-title">Login</h2>
+            <form id="standalone-login-form">
+                <div class="form-group">
+                    <label for="page-login-username">Username</label>
+                    <input type="text" id="page-login-username" class="form-input" placeholder="Enter your username" required>
+                </div>
+                <div class="form-group">
+                    <label for="page-login-password">Password</label>
+                    <input type="password" id="page-login-password" class="form-input" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="page-login-submit" class="btn-submit">Sign In</button>
+                <div id="page-login-status" class="form-alert" style="display: none;"></div>
+            </form>
+            <p class="form-note" style="text-align: center; margin-top: 1.5rem;">
+                Don't have an account yet? <a href="{% url 'register-page' %}">Register here</a>
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var LL = window.LittleLemon;
+    var form = document.getElementById('standalone-login-form');
+    var alertBox = document.getElementById('page-login-status');
+    var btn = document.getElementById('page-login-submit');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var username = document.getElementById('page-login-username').value.trim();
+        var password = document.getElementById('page-login-password').value;
+
+        LL.setLoading(btn, true, 'Signing in...');
+        LL.hideAlert(alertBox);
+
+        try {
+            var res = await LL.api('/api/api-token-auth/', {
+                method: 'POST',
+                body: { username: username, password: password },
+                auth: false
+            });
+
+            LL.setLoading(btn, false);
+            if (res.ok && res.data && res.data.token) {
+                LL.auth.save(res.data.token, res.data.username || username, res.data.is_staff);
+                LL.showAlert(alertBox, 'success', 'Login successful! Redirecting...');
+                setTimeout(function() {
+                    window.location.href = '/reservations/';
+                }, 800);
+            } else {
+                LL.showAlert(alertBox, 'error', 'Invalid username or password.');
+            }
+        } catch(err) {
+            LL.setLoading(btn, false);
+            LL.showAlert(alertBox, 'error', 'Error contacting authentication server.');
+        }
+    });
+});
+</script>
+{% endblock %}
+

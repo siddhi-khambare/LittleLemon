@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}About Us{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="page-hero-inner">
+        <span class="hero-eyebrow">Our Story</span>
+        <h1>About Little Lemon</h1>
+        <p>Traditional Mediterranean recipes, served with a modern twist since 1995.</p>
+    </div>
+</section>
+
+<!-- Story -->
+<section class="about-section" id="story">
+    <div class="about-text">
+        <h2>Little Lemon</h2>
+        <div class="about-sub">Chicago</div>
+        <p>
+            Little Lemon began as a small neighbourhood bistro opened by two brothers,
+            Mario and Adrian, who grew up cooking beside their grandmother on the
+            Mediterranean coast. They brought her recipes to Chicago with one promise:
+            honest food made from the freshest ingredients.
+        </p>
+        <p>
+            Three decades later we are still family-owned. Our menu changes with the seasons,
+            our bread is baked every morning, and every guest is welcomed like part of the family.
+        </p>
+    </div>
+    <div class="about-images about-collage">
+        <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=700&q=80"
+             alt="Little Lemon dining room" class="about-img collage-back">
+        <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=700&q=80"
+             alt="Little Lemon restaurant interior" class="about-img collage-front">
+    </div>
+</section>
+
+<!-- Chefs -->
+<section class="chefs-section">
+    <div class="section-container">
+        <span class="section-eyebrow center">The Kitchen</span>
+        <h2 class="section-title">Meet our chefs</h2>
+        <p class="section-subtitle">The people behind every plate that leaves our kitchen.</p>
+        <div class="chefs-grid">
+            <article class="chef-card">
+                <img src="https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=600&q=80" alt="Chef Mario at work">
+                <div class="chef-info">
+                    <h3>Mario</h3>
+                    <span class="chef-role">Co-owner &amp; Head Chef</span>
+                    <p>Keeps grandma's recipes alive and leads the kitchen with passion for slow-cooked, seasonal dishes.</p>
+                </div>
+            </article>
+            <article class="chef-card">
+                <img src="https://images.unsplash.com/photo-1583394293214-28ded15ee548?auto=format&fit=crop&w=600&q=80" alt="Chef Kenji">
+                <div class="chef-info">
+                    <h3>Kenji</h3>
+                    <span class="chef-role">Executive Sous Chef</span>
+                    <p>Brings precision and modern technique to classic Mediterranean flavours, from grill to garnish.</p>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- Ingredients & experience -->
+<section class="about-section reverse">
+    <div class="about-images">
+        <img src="https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=800&q=80"
+             alt="Fresh produce at the market" class="about-img wide">
+    </div>
+    <div class="about-text">
+        <span class="section-eyebrow">Fresh Ingredients</span>
+        <h2 class="about-heading">From market to table</h2>
+        <p>
+            Every morning our team visits local Chicago markets and partner farms for
+            vegetables, herbs and citrus. Olive oil, feta and spices are imported from
+            small family producers in Greece and Italy.
+        </p>
+        <ul class="check-list">
+            <li>Locally sourced seasonal vegetables</li>
+            <li>Bread and desserts baked in-house daily</li>
+            <li>Sustainably caught seafood</li>
+            <li>Vegetarian and gluten-free options</li>
+        </ul>
+    </div>
+</section>
+
+<section class="about-section">
+    <div class="about-text">
+        <span class="section-eyebrow">The Experience</span>
+        <h2 class="about-heading">More than a meal</h2>
+        <p>
+            Whether it is a quick lunch, a family celebration or a quiet dinner on our
+            terrace, we want every visit to feel relaxed and memorable. Our staff are happy
+            to recommend dishes and accommodate dietary needs.
+        </p>
+        <div class="hero-actions">
+            <a href="{% url 'reservations' %}" class="btn-reserve">Reserve a Table</a>
+            <a href="{% url 'menu' %}" class="btn-outline-dark">View Menu</a>
+        </div>
+    </div>
+    <div class="about-images">
+        <img src="https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=80"
+             alt="Little Lemon terrace dining" class="about-img wide">
+    </div>
+</section>
+{% endblock %}
+
