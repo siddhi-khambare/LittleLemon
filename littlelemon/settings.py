@@ -6,22 +6,21 @@ Coursera Meta Back-End Developer Capstone Project
 import importlib.util
 import os
 from pathlib import Path
-
-# Load environment variables from .env file
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from local .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:
+    pass
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    'SECRET_KEY',
-    'django-insecure-littlelemon-capstone-project-secret-key-2026'
-)
+# Loaded from .env (with a runtime-generated key fallback if .env is absent in CI/testing)
+SECRET_KEY = os.getenv('SECRET_KEY') or get_random_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
@@ -105,10 +104,11 @@ DATABASES = {
     }
 }
 
-# Seamless fallback to SQLite only during local offline development or if MySQL password is placeholder
+# Seamless fallback to SQLite only during local offline development or when MySQL is unconfigured
 if (
     os.environ.get('FORCE_SQLITE', '').lower() in ('true', '1', 'yes')
-    or DB_PASSWORD == 'your_mysql_password'
+    or not DB_PASSWORD
+    or DB_PASSWORD.startswith('your_')
     or importlib.util.find_spec('MySQLdb') is None
 ):
     DATABASES = {
