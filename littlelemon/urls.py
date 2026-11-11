@@ -1,24 +1,35 @@
+
 """
 URL configuration for littlelemon project.
-Coursera Meta Back-End Developer Capstone Project
+Coursera Meta Back-End Developer Capstone Project.
 """
+
 import importlib.util
 
 from django.contrib import admin
 from django.urls import include, path
-from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework.routers import DefaultRouter
+from rest_framework.authtoken.views import obtain_auth_token
 
 from restaurant import views
 
-# Coursera-style booking path: /restaurant/booking/tables/
+
+# Coursera-compatible Booking API
+# URL: /restaurant/booking/tables/
+
 coursera_router = DefaultRouter()
-coursera_router.register(r'tables', views.BookingViewSet, basename='tables')
+coursera_router.register(
+    r'tables',
+    views.BookingViewSet,
+    basename='tables'
+)
+
 
 urlpatterns = [
+    # Admin
     path('admin/', admin.site.urls),
 
-    # Website pages
+    # Website Pages
     path('', views.index, name='home'),
     path('about/', views.about_page, name='about'),
     path('menu/', views.menu_page, name='menu'),
@@ -28,16 +39,29 @@ urlpatterns = [
     path('register/', views.register_page, name='register-page'),
     path('contact/', views.contact_page, name='contact-page'),
 
-    # REST API
+    # Main REST API
     path('api/', include('restaurant.urls')),
 
-    # Coursera-compatible paths (/restaurant/menu/, /restaurant/booking/tables/)
+    # Coursera Booking API
+    # Keep this before the general restaurant include
+    path(
+        'restaurant/booking/',
+        include(coursera_router.urls)
+    ),
+
+    # Coursera Restaurant API
     path('restaurant/', include('restaurant.urls')),
-    path('restaurant/booking/', include(coursera_router.urls)),
-    path('api-token-auth/', views.CustomAuthToken.as_view(), name='root-api-token-auth'),
+
+    # Token Authentication
+    path(
+        'api-token-auth/',
+        obtain_auth_token,
+        name='api-token-auth'
+    ),
 ]
 
-# Optional Djoser paths (/auth/users/, /auth/token/login/)
+
+# Optional Djoser Authentication
 if importlib.util.find_spec('djoser') is not None:
     urlpatterns += [
         path('auth/', include('djoser.urls')),
